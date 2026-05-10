@@ -93,6 +93,17 @@ to reading the request headers directly.
   middleware with `AuthMode` + validation strategies.
 - [`mihaelamj/OpenAPILoggingMiddleware`](https://github.com/mihaelamj/OpenAPILoggingMiddleware)
   for request/response logging on both client and server sides.
+- [`mihaelamj/swift-server-middleware-petshop`](https://github.com/mihaelamj/swift-server-middleware-petshop)
+  end-to-end integration tests for all three middlewares composed inside
+  a real Vapor + OpenAPI 3.1 app, with macOS + Linux CI.
+
+## Platform support
+
+| Platform | How CI proves it |
+|---|---|
+| macOS 13+ | full `swift build` + `swift test` (33 tests) |
+| Linux (Swift 6.0 container) | full `swift build` + `swift test` (33 tests) |
+| iOS / tvOS / watchOS | **not supported** — Vapor itself does not ship for these platforms |
 
 ## Documentation
 
@@ -106,12 +117,13 @@ swift package --allow-writing-to-directory ./docs generate-documentation \
 
 ## Testing
 
-The package ships with **24 tests across 2 suites**:
+The package ships with **33 tests across 3 suites**:
 
 | Area | Tests |
 |---|---|
 | `ClientContext` (task-local semantics) | 8 |
 | `ClientIpMiddleware` (Vapor integration, trusted-proxy-hops) | 16 |
+| `ClientIpMiddleware: adversarial / malformed inputs` (XFF edge cases, 100-fold concurrent burst) | 9 |
 
 Coverage includes the secure-by-default `hops=0` path (XFF ignored), `hops=1`
 single-proxy resolution including client-spoof resistance, `hops=2`
