@@ -19,10 +19,10 @@ struct ClientIpMiddlewareTests {
         }
     }
 
-    private func makeApp() async throws -> (Application, Recorder) {
+    private func makeApp(trustedProxyHops: Int = 0) async throws -> (Application, Recorder) {
         let app = try await Application.make(.testing)
         let recorder = Recorder()
-        app.middleware.use(ClientIpMiddleware())
+        app.middleware.use(ClientIpMiddleware(trustedProxyHops: trustedProxyHops))
         app.get("probe") { _ -> String in
             await recorder.record(
                 ip: ClientContext.clientIp,
@@ -33,11 +33,45 @@ struct ClientIpMiddlewareTests {
         return (app, recorder)
     }
 
-    // MARK: - X-Forwarded-For
+    // MARK: - Default (trustedProxyHops = 0): ignore X-Forwarded-For entirely
 
-    @Test("captures single-IP X-Forwarded-For header")
-    func xffSingleIP() async throws {
+    @Test("default hops=0: X-Forwarded-For is ignored, falls back to remoteAddress")
+    func defaultIgnoresXFF() async throws {
         let (app, recorder) = try await makeApp()
+        try await app.testing().test(
+            .GET, "probe",
+            beforeRequest: { req in
+                req.headers.replaceOrAdd(name: .xForwardedFor, value: "203.0.113.7")
+            }
+        ) { res async in
+            #expect(res.status == .ok)
+        }
+        // app.testing() doesn't simulate a socket-level remoteAddress, so the
+        // result is nil. The point is that "203.0.113.7" is NOT picked up.
+        await #expect(recorder.ip == nil)
+        try await app.asyncShutdown()
+    }
+
+    @Test("default hops=0: spoofed XFF is ignored")
+    func defaultIgnoresSpoofedXFF() async throws {
+        let (app, recorder) = try await makeApp()
+        try await app.testing().test(
+            .GET, "probe",
+            beforeRequest: { req in
+                req.headers.replaceOrAdd(name: .xForwardedFor, value: "1.2.3.4")
+            }
+        ) { res async in
+            #expect(res.status == .ok)
+        }
+        await #expect(recorder.ip == nil)
+        try await app.asyncShutdown()
+    }
+
+    // MARK: - trustedProxyHops = 1 (single proxy in front)
+
+    @Test("hops=1: rightmost XFF entry wins (single proxy added one hop)")
+    func hops1RightmostWins() async throws {
+        let (app, recorder) = try await makeApp(trustedProxyHops: 1)
         try await app.testing().test(
             .GET, "probe",
             beforeRequest: { req in
@@ -50,15 +84,18 @@ struct ClientIpMiddlewareTests {
         try await app.asyncShutdown()
     }
 
-    @Test("multi-hop X-Forwarded-For: picks first (leftmost) hop, ignores proxies")
-    func xffMultiHopPicksFirst() async throws {
-        let (app, recorder) = try await makeApp()
+    @Test("hops=1: client spoof + proxy append → rightmost (real client) wins")
+    func hops1ResistsClientSpoof() async throws {
+        // Client sends spoofed XFF; the trusted proxy appends the actual TCP
+        // source it observed. With hops=1 we pick the proxy-added rightmost
+        // entry, ignoring the client's lie.
+        let (app, recorder) = try await makeApp(trustedProxyHops: 1)
         try await app.testing().test(
             .GET, "probe",
             beforeRequest: { req in
                 req.headers.replaceOrAdd(
                     name: .xForwardedFor,
-                    value: "203.0.113.7, 198.51.100.10, 192.0.2.99"
+                    value: "1.2.3.4, 203.0.113.7"
                 )
             }
         ) { res async in
@@ -68,15 +105,26 @@ struct ClientIpMiddlewareTests {
         try await app.asyncShutdown()
     }
 
-    @Test("X-Forwarded-For with whitespace around the first IP is trimmed")
-    func xffTrimsWhitespace() async throws {
-        let (app, recorder) = try await makeApp()
+    @Test("hops=1: missing XFF falls back to remoteAddress")
+    func hops1FallbackToRemoteAddress() async throws {
+        let (app, recorder) = try await makeApp(trustedProxyHops: 1)
+        try await app.testing().test(.GET, "probe") { res async in
+            #expect(res.status == .ok)
+        }
+        // Vapor app.testing() doesn't supply remoteAddress.
+        await #expect(recorder.ip == nil)
+        try await app.asyncShutdown()
+    }
+
+    @Test("hops=1: whitespace around the picked entry is trimmed")
+    func hops1TrimsWhitespace() async throws {
+        let (app, recorder) = try await makeApp(trustedProxyHops: 1)
         try await app.testing().test(
             .GET, "probe",
             beforeRequest: { req in
                 req.headers.replaceOrAdd(
                     name: .xForwardedFor,
-                    value: "   203.0.113.7   , 198.51.100.10"
+                    value: "1.2.3.4 ,    203.0.113.7   "
                 )
             }
         ) { res async in
@@ -86,9 +134,75 @@ struct ClientIpMiddlewareTests {
         try await app.asyncShutdown()
     }
 
-    @Test("IPv6 X-Forwarded-For is captured verbatim")
-    func xffIPv6() async throws {
-        let (app, recorder) = try await makeApp()
+    // MARK: - trustedProxyHops = 2 (two proxies in front)
+
+    @Test("hops=2: 2nd-from-right entry wins (real client)")
+    func hops2PicksSecondFromRight() async throws {
+        // CDN → nginx → app. Client connects to CDN; CDN puts client IP into
+        // XFF; nginx appends CDN-IP. App receives `client, cdn`. Wait — that's
+        // hops=1 because app sees one proxy (nginx). Two hops requires:
+        // CDN → nginx → app, where CDN appends client to XFF, nginx appends
+        // cdn-IP to XFF. App sees `client, cdn`. App's remoteAddress is nginx.
+        // With hops=2 trusted (nginx + CDN both trusted), index = count-2 = 0
+        // → "client".
+        let (app, recorder) = try await makeApp(trustedProxyHops: 2)
+        try await app.testing().test(
+            .GET, "probe",
+            beforeRequest: { req in
+                req.headers.replaceOrAdd(
+                    name: .xForwardedFor,
+                    value: "203.0.113.7, 198.51.100.10"
+                )
+            }
+        ) { res async in
+            #expect(res.status == .ok)
+        }
+        await #expect(recorder.ip == "203.0.113.7")
+        try await app.asyncShutdown()
+    }
+
+    @Test("hops=2 with a client-spoofed prepend → still resolves to real client")
+    func hops2IgnoresSpoofedPrepend() async throws {
+        // Client sends `spoof` to CDN. CDN appends client-IP. Nginx appends
+        // CDN-IP. App sees `spoof, client, cdn`. Trusted hops=2 (nginx, CDN).
+        // index = 3 - 2 = 1 → "client". Spoof is ignored because it's outside
+        // the trusted-hops window.
+        let (app, recorder) = try await makeApp(trustedProxyHops: 2)
+        try await app.testing().test(
+            .GET, "probe",
+            beforeRequest: { req in
+                req.headers.replaceOrAdd(
+                    name: .xForwardedFor,
+                    value: "1.2.3.4, 203.0.113.7, 198.51.100.10"
+                )
+            }
+        ) { res async in
+            #expect(res.status == .ok)
+        }
+        await #expect(recorder.ip == "203.0.113.7")
+        try await app.asyncShutdown()
+    }
+
+    @Test("hops=2 but only 1 XFF entry → fallback to remoteAddress")
+    func hops2InsufficientEntriesFallback() async throws {
+        let (app, recorder) = try await makeApp(trustedProxyHops: 2)
+        try await app.testing().test(
+            .GET, "probe",
+            beforeRequest: { req in
+                req.headers.replaceOrAdd(name: .xForwardedFor, value: "1.2.3.4")
+            }
+        ) { res async in
+            #expect(res.status == .ok)
+        }
+        await #expect(recorder.ip == nil)
+        try await app.asyncShutdown()
+    }
+
+    // MARK: - IPv6
+
+    @Test("IPv6 client IP is captured verbatim under hops=1")
+    func hops1IPv6() async throws {
+        let (app, recorder) = try await makeApp(trustedProxyHops: 1)
         try await app.testing().test(
             .GET, "probe",
             beforeRequest: { req in
@@ -104,7 +218,7 @@ struct ClientIpMiddlewareTests {
         try await app.asyncShutdown()
     }
 
-    // MARK: - User-Agent
+    // MARK: - User-Agent (unchanged across hops settings)
 
     @Test("captures User-Agent verbatim")
     func userAgentVerbatim() async throws {
@@ -134,9 +248,9 @@ struct ClientIpMiddlewareTests {
 
     // MARK: - Combined behavior
 
-    @Test("captures both IP and User-Agent in the same request")
+    @Test("hops=1: captures both IP and User-Agent in the same request")
     func capturesBoth() async throws {
-        let (app, recorder) = try await makeApp()
+        let (app, recorder) = try await makeApp(trustedProxyHops: 1)
         try await app.testing().test(
             .GET, "probe",
             beforeRequest: { req in
@@ -157,8 +271,6 @@ struct ClientIpMiddlewareTests {
         try await app.testing().test(.GET, "probe") { res async in
             #expect(res.status == .ok)
         }
-        // app.testing() doesn't simulate a socket-level remoteAddress, so both
-        // sources are absent.
         await #expect(recorder.ip == nil)
         await #expect(recorder.ua == nil)
         try await app.asyncShutdown()
@@ -168,7 +280,7 @@ struct ClientIpMiddlewareTests {
 
     @Test("task-locals do not leak across sibling requests")
     func noLeakAcrossRequests() async throws {
-        let (app, recorder) = try await makeApp()
+        let (app, recorder) = try await makeApp(trustedProxyHops: 1)
 
         // First request sets values.
         try await app.testing().test(
@@ -195,11 +307,8 @@ struct ClientIpMiddlewareTests {
 
     // MARK: - Direct middleware call (no Vapor app, hand-built Request)
 
-    /// Calls the middleware with a hand-constructed `Request` so we can assert
-    /// behaviour without depending on `app.testing()`. This also lets us verify
-    /// task-local propagation through to the handler in isolation.
-    @Test("direct call: X-Forwarded-For wins over remoteAddress")
-    func directCallXFFWins() async throws {
+    @Test("direct call hops=1: rightmost XFF entry wins")
+    func directCallHops1RightmostWins() async throws {
         let app = try await Application.make(.testing)
         defer { Task { try? await app.asyncShutdown() } }
 
@@ -209,7 +318,7 @@ struct ClientIpMiddlewareTests {
             url: URI(path: "/probe"),
             on: app.eventLoopGroup.next()
         )
-        req.headers.replaceOrAdd(name: .xForwardedFor, value: "203.0.113.7, 198.51.100.10")
+        req.headers.replaceOrAdd(name: .xForwardedFor, value: "1.2.3.4, 203.0.113.7")
         req.headers.replaceOrAdd(name: .userAgent, value: "test-ua")
 
         struct Recorded: AsyncResponder {
@@ -224,12 +333,20 @@ struct ClientIpMiddlewareTests {
         }
 
         let recorder = Recorder()
-        let response = try await ClientIpMiddleware().respond(
+        let response = try await ClientIpMiddleware(trustedProxyHops: 1).respond(
             to: req,
             chainingTo: Recorded(recorder: recorder)
         )
         #expect(response.status == .ok)
         await #expect(recorder.ip == "203.0.113.7")
         await #expect(recorder.ua == "test-ua")
+    }
+
+    // MARK: - Negative trustedProxyHops is clamped to 0
+
+    @Test("negative trustedProxyHops is clamped to 0")
+    func negativeHopsClamped() async throws {
+        let mw = ClientIpMiddleware(trustedProxyHops: -3)
+        #expect(mw.trustedProxyHops == 0)
     }
 }

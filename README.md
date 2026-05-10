@@ -1,7 +1,7 @@
 # ClientIpMiddleware
 
 ![Swift 6.0+](https://img.shields.io/badge/Swift-6.0+-orange.svg)
-![Platforms](https://img.shields.io/badge/Platform-macOS%2013+-blue.svg)
+![Platforms](https://img.shields.io/badge/Platforms-macOS%2013+%20%7C%20Linux-blue.svg)
 
 A small Vapor `AsyncMiddleware` that captures the client IP and `User-Agent` of
 each inbound request into task-locals, so OpenAPI-generated handlers (which do
@@ -29,7 +29,12 @@ import ClientIpMiddleware
 import Vapor
 
 let app = try await Application.make(.detect())
+
+// Direct deployment (no proxy in front) — secure default:
 app.middleware.use(ClientIpMiddleware())
+
+// Behind one trusted reverse proxy (nginx, Caddy, ALB, Cloudflare, ...):
+app.middleware.use(ClientIpMiddleware(trustedProxyHops: 1))
 ```
 
 Read either value from any async handler executed during the request:
@@ -49,12 +54,20 @@ task-locals the same way conventional Vapor handlers do.
 
 ## What it captures
 
-- **Client IP** — first comma-separated value of `X-Forwarded-For` if present
-  (trimmed of whitespace), otherwise the connection's `remoteAddress`. Behind a
-  reverse proxy, configure the proxy to set `X-Forwarded-For: <client>[, <proxy1>...]`
-  so the real client (not the proxy) is recorded. The middleware picks the
-  leftmost hop, which by convention is the original client.
+- **Client IP** — selected per `trustedProxyHops`:
+  - `0` (default): ignore `X-Forwarded-For` entirely; use the connection's
+    `remoteAddress?.ipAddress`. Anything in `X-Forwarded-For` is
+    client-controllable when there's no proxy stripping it, so the safe
+    default is to not trust it.
+  - `n >= 1`: peel `n` hops off the right of `X-Forwarded-For`. The entry at
+    `count - n` is what the n-th trusted proxy received the connection from
+    (the real client when `n` matches the proxy depth). Falls back to
+    `remoteAddress` when the header is absent or has fewer than `n` entries.
 - **User-Agent** — verbatim from the inbound `User-Agent` header.
+
+> Match `trustedProxyHops` to your actual deployment. Setting it too high lets
+> a client spoof the IP by stuffing extra entries into `X-Forwarded-For`;
+> setting it too low surfaces the proxy IP instead of the client.
 
 Both values land in task-locals on `ClientContext`:
 
@@ -93,16 +106,21 @@ swift package --allow-writing-to-directory ./docs generate-documentation \
 
 ## Testing
 
-The package ships with **17 tests across 2 suites**:
+The package ships with **24 tests across 2 suites**:
 
 | Area | Tests |
 |---|---|
-| `ClientContext` (task-local semantics) | 7 |
-| `ClientIpMiddleware` (Vapor integration) | 10 |
+| `ClientContext` (task-local semantics) | 8 |
+| `ClientIpMiddleware` (Vapor integration, trusted-proxy-hops) | 16 |
 
-Coverage includes single + multi-hop `X-Forwarded-For`, whitespace trimming,
-IPv6, missing-header fallback, cross-request isolation, and propagation across
-`await`. Run with `swift test`.
+Coverage includes the secure-by-default `hops=0` path (XFF ignored), `hops=1`
+single-proxy resolution including client-spoof resistance, `hops=2`
+multi-proxy resolution, fallback to `remoteAddress` when XFF is absent or
+under-length, IPv6, whitespace trimming, missing-header fallback,
+cross-request isolation, propagation across `await`, and negative-hops
+clamping. Run with `swift test`.
+
+CI runs the suite on macOS and on Linux (Swift 6.0 container).
 
 ## License
 
