@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# Platform support: macOS + Linux only.
+#
+# ClientIpMiddleware is a Vapor `AsyncMiddleware` and Vapor itself does not
+# ship for iOS / tvOS / watchOS, so there is no iOS row in this matrix.
+# Linux is the primary deployment target.
+
 jobs:
   linux:
     name: Swift ${{ matrix.swift }} on Linux
@@ -18,17 +24,13 @@ jobs:
       image: swift:${{ matrix.swift }}
     steps:
       - uses: actions/checkout@v4
-      - name: swift build
-        run: swift build
-      - name: swift test
-        run: swift test --parallel
+      - run: swift build
+      - run: swift test --parallel
 
   macos:
     name: Swift on macOS
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: swift build
-        run: swift build
-      - name: swift test
-        run: swift test --parallel
+      - run: swift build
+      - run: swift test --parallel
