@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# Local Claude tooling
+.claude/
+CLAUDE.md
+
+# DocC build outputs
+.docs/
+*.doccarchive
+
+# Editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Logs
+*.log
