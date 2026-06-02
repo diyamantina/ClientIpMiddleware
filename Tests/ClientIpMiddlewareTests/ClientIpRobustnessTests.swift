@@ -138,7 +138,7 @@ struct ClientIpRobustnessTests {
 
     // MARK: - Non-IP garbage (the middleware does NOT validate)
 
-    @Test("hops=1: non-IP garbage is captured verbatim — middleware doesn't validate the value")
+    @Test("hops=1: non-IP garbage is captured verbatim, middleware doesn't validate the value")
     func garbageInGarbageOut() async throws {
         // Confirm the middleware is honest about its scope: it doesn't
         // promise the captured string is a valid IP. Validation, if needed,

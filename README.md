@@ -32,7 +32,7 @@ import Vapor
 
 let app = try await Application.make(.detect())
 
-// Direct deployment (no proxy in front) — secure default:
+// Direct deployment (no proxy in front), secure default:
 app.middleware.use(ClientIpMiddleware())
 
 // Behind one trusted reverse proxy (nginx, Caddy, ALB, Cloudflare, ...):
@@ -56,7 +56,7 @@ task-locals the same way conventional Vapor handlers do.
 
 ## What it captures
 
-- **Client IP** — selected per `trustedProxyHops`:
+- **Client IP**, selected per `trustedProxyHops`:
   - `0` (default): ignore `X-Forwarded-For` entirely; use the connection's
     `remoteAddress?.ipAddress`. Anything in `X-Forwarded-For` is
     client-controllable when there's no proxy stripping it, so the safe
@@ -65,7 +65,7 @@ task-locals the same way conventional Vapor handlers do.
     `count - n` is what the n-th trusted proxy received the connection from
     (the real client when `n` matches the proxy depth). Falls back to
     `remoteAddress` when the header is absent or has fewer than `n` entries.
-- **User-Agent** — verbatim from the inbound `User-Agent` header.
+- **User-Agent**: verbatim from the inbound `User-Agent` header.
 
 > Match `trustedProxyHops` to your actual deployment. Setting it too high lets
 > a client spoof the IP by stuffing extra entries into `X-Forwarded-For`;
@@ -105,7 +105,7 @@ to reading the request headers directly.
 |---|---|
 | macOS 13+ | full `swift build` + `swift test` (33 tests) |
 | Linux (Swift 6.0 container) | full `swift build` + `swift test` (33 tests) |
-| iOS / tvOS / watchOS | **not supported** — Vapor itself does not ship for these platforms |
+| iOS / tvOS / watchOS | **not supported**: Vapor itself does not ship for these platforms |
 
 ## Documentation
 
@@ -152,4 +152,4 @@ Notable changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0. See [LICENSE](LICENSE).

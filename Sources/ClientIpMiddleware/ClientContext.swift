@@ -4,7 +4,7 @@ import Foundation
 ///
 /// ## Overview
 ///
-/// OpenAPI-generated handlers do not see Vapor's `Request` directly — they only
+/// OpenAPI-generated handlers do not see Vapor's `Request` directly; they only
 /// receive the typed `Operations.<X>.Input`. They therefore cannot read
 /// `request.headers` or `request.remoteAddress`. ``ClientIpMiddleware`` stashes the
 /// extracted client IP and User-Agent here so generated handlers can still log,

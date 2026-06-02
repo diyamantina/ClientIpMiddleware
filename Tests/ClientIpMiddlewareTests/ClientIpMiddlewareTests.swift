@@ -139,7 +139,7 @@ struct ClientIpMiddlewareTests {
     @Test("hops=2: 2nd-from-right entry wins (real client)")
     func hops2PicksSecondFromRight() async throws {
         // CDN → nginx → app. Client connects to CDN; CDN puts client IP into
-        // XFF; nginx appends CDN-IP. App receives `client, cdn`. Wait — that's
+        // XFF; nginx appends CDN-IP. App receives `client, cdn`. Wait, that's
         // hops=1 because app sees one proxy (nginx). Two hops requires:
         // CDN → nginx → app, where CDN appends client to XFF, nginx appends
         // cdn-IP to XFF. App sees `client, cdn`. App's remoteAddress is nginx.
