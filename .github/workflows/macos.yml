@@ -1,0 +1,22 @@
+name: macOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# macOS CI: full `swift build` + `swift test`.
+#
+# ClientIpMiddleware is a Vapor `AsyncMiddleware`, and Vapor does not ship for
+# iOS / tvOS / watchOS, so there are no Simulator build rows here. macOS and
+# Linux (see linux.yml) are the only supported platforms.
+
+jobs:
+  macos:
+    name: Swift on macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift build
+      - run: swift test --parallel
