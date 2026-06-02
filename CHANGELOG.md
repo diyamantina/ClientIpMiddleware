@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-02
+
+Packaging and repository hardening. No library code changed; the compiled
+surface is identical to 1.0.0.
+
+### Added
+- `LICENSE` file (Apache 2.0). The 1.0.0 tag declared Apache 2.0 in the README
+  but shipped no license file; consumers pinning `from: "1.0.0"` resolved a tree
+  without one.
+- Community health docs: `CODE_OF_CONDUCT.md`, `SECURITY.md`, `SUPPORT.md`,
+  `CONTRIBUTING.md`, and this `CHANGELOG.md`.
+- GitHub issue forms (bug + feature), a PR template, and a priority labeler
+  workflow.
+- Per-platform `Linux` and `macOS` CI workflows with status badges, a `Gates`
+  workflow, and local git hooks enforcing no em dashes, no AI attribution, and a
+  CHANGELOG entry when production source changes.
+
 ## [1.0.0] - 2026-05-10
 
 Initial public release.
@@ -26,5 +43,6 @@ Initial public release.
   burst).
 - CI on macOS and on Linux (Swift 6.0 container).
 
-[Unreleased]: https://github.com/mihaelamj/ClientIpMiddleware/compare/1.0.0...HEAD
+[Unreleased]: https://github.com/mihaelamj/ClientIpMiddleware/compare/1.0.1...HEAD
+[1.0.1]: https://github.com/mihaelamj/ClientIpMiddleware/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/mihaelamj/ClientIpMiddleware/releases/tag/1.0.0
