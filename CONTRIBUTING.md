@@ -20,6 +20,20 @@ The package supports macOS 13+ and Linux. It is a Vapor `AsyncMiddleware`, and
 Vapor does not ship for iOS / tvOS / watchOS, so those platforms are not
 supported.
 
+## Git hooks
+
+Install the repo hooks once after cloning:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+This wires two hooks: `pre-commit` rejects em dashes and AI-attribution tells in
+staged content, and `commit-msg` rejects the same in the message and requires a
+`CHANGELOG.md` entry when production source changes (opt out with
+`[no-changelog]` in the commit body when no entry is warranted). The same gates
+run on Linux in CI (`.github/workflows/gates.yml`) as the backstop.
+
 ## Conventions
 
 - **Swift 6 strict concurrency** is on. Types crossing concurrency boundaries are

@@ -1,0 +1,28 @@
+#!/bin/sh
+# Pre-commit gate. Scans staged additions for em dashes (U+2014) and
+# AI-attribution tells in file content. Portable POSIX sh, no PCRE.
+# Install with: git config core.hooksPath .githooks
+#
+# The enforcement scripts and the CI gate are excluded from the scan: they hold
+# the patterns as literals on purpose.
+
+emdash=$(printf '\342\200\224')
+
+added=$(git diff --cached --unified=0 --no-color -- . \
+    ':(exclude).githooks/*' \
+    ':(exclude).github/workflows/gates.yml' \
+    | grep -E '^\+' | grep -vE '^\+\+\+')
+
+fail=0
+
+if printf '%s\n' "$added" | LC_ALL=C grep -q "$emdash"; then
+    echo "pre-commit: em dash (U+2014) found in staged changes. Replace it with a comma, period, or colon." >&2
+    fail=1
+fi
+
+if printf '%s\n' "$added" | grep -iE 'co-authored-by:[^@]*(claude|copilot|chatgpt)|generated (with|by)[^.]{0,30}(claude|copilot|chatgpt)|claude code|🤖' >/dev/null; then
+    echo "pre-commit: AI-attribution tell found in staged changes." >&2
+    fail=1
+fi
+
+exit $fail
