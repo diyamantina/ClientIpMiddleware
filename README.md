@@ -136,6 +136,20 @@ clamping. Run with `swift test`.
 
 CI runs the suite on macOS and on Linux (Swift 6.0 container).
 
+## Contributing
+
+Contributions are welcome. Before opening a PR, please read:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): setup, conventions, commit format, and the
+  PR checklist.
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): the behavior expected of everyone
+  taking part.
+- [SECURITY.md](SECURITY.md): how to report a vulnerability privately (do not
+  open a public issue for security problems).
+- [SUPPORT.md](SUPPORT.md): where to ask questions and file bugs.
+
+Notable changes are recorded in [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
