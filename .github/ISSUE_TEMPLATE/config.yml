@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/mihaelamj/ClientIpMiddleware/discussions
+    about: Ask questions, float ideas, or discuss design in Discussions.
+  - name: Security report
+    url: https://github.com/mihaelamj/ClientIpMiddleware/security/advisories/new
+    about: Report a vulnerability privately. Do not file security issues in public. See SECURITY.md.
