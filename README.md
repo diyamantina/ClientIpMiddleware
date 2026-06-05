@@ -5,9 +5,20 @@
 ![Swift 6.0+](https://img.shields.io/badge/Swift-6.0+-orange.svg)
 ![Platforms](https://img.shields.io/badge/Platforms-macOS%2013+%20%7C%20Linux-blue.svg)
 
-A small Vapor `AsyncMiddleware` that captures the client IP and `User-Agent` of
-each inbound request into task-locals, so OpenAPI-generated handlers (which do
-not see Vapor's `Request`) can read them.
+Vapor middleware for carrying client identity into OpenAPI-generated handlers.
+
+`ClientIpMiddleware` captures a best-effort client IP and the inbound
+`User-Agent`, then stores both in task-locals. That gives generated Swift
+OpenAPI handlers, which normally receive typed operation input but not Vapor's
+`Request`, a clean way to log, audit, rate-limit, or enrich request handling.
+
+Use it when you need:
+
+- Client IP and user-agent access from generated OpenAPI handlers.
+- A secure default for direct deployments where `X-Forwarded-For` is untrusted.
+- Explicit reverse-proxy handling through `trustedProxyHops`.
+- Per-request values that propagate across `await` boundaries and clear
+  automatically after the request finishes.
 
 ## Installation
 
@@ -24,7 +35,9 @@ not see Vapor's `Request`) can read them.
 ),
 ```
 
-## Quick start
+## Quick Start
+
+Install the middleware once during Vapor boot:
 
 ```swift
 import ClientIpMiddleware
@@ -32,46 +45,49 @@ import Vapor
 
 let app = try await Application.make(.detect())
 
-// Direct deployment (no proxy in front), secure default:
+// Direct deployment, local development, or no trusted proxy in front.
 app.middleware.use(ClientIpMiddleware())
 
-// Behind one trusted reverse proxy (nginx, Caddy, ALB, Cloudflare, ...):
+// Behind one trusted reverse proxy, such as nginx, Caddy, ALB, or Cloudflare.
 app.middleware.use(ClientIpMiddleware(trustedProxyHops: 1))
+
+// Behind two trusted hops, such as CDN -> reverse proxy -> app.
+app.middleware.use(ClientIpMiddleware(trustedProxyHops: 2))
 ```
 
-Read either value from any async handler executed during the request:
+Read the values from any async handler executed during the request:
 
 ```swift
 import ClientIpMiddleware
 
 func someOperation(...) async throws -> ... {
     let ip = ClientContext.clientIp ?? "unknown"
-    let ua = ClientContext.userAgent ?? "unknown"
-    // ...
+    let userAgent = ClientContext.userAgent ?? "unknown"
+
+    // Log, audit, rate-limit, or pass the values to your domain layer.
 }
 ```
 
-OpenAPI-generated handlers (which never see Vapor's `Request`) read the
-task-locals the same way conventional Vapor handlers do.
+The same access pattern works in generated OpenAPI handlers and conventional
+Vapor route handlers.
 
-## What it captures
+## Client IP Resolution
 
-- **Client IP**, selected per `trustedProxyHops`:
-  - `0` (default): ignore `X-Forwarded-For` entirely; use the connection's
-    `remoteAddress?.ipAddress`. Anything in `X-Forwarded-For` is
-    client-controllable when there's no proxy stripping it, so the safe
-    default is to not trust it.
-  - `n >= 1`: peel `n` hops off the right of `X-Forwarded-For`. The entry at
-    `count - n` is what the n-th trusted proxy received the connection from
-    (the real client when `n` matches the proxy depth). Falls back to
-    `remoteAddress` when the header is absent or has fewer than `n` entries.
-- **User-Agent**: verbatim from the inbound `User-Agent` header.
+`trustedProxyHops` controls whether `X-Forwarded-For` is trusted.
 
-> Match `trustedProxyHops` to your actual deployment. Setting it too high lets
-> a client spoof the IP by stuffing extra entries into `X-Forwarded-For`;
-> setting it too low surfaces the proxy IP instead of the client.
+| Setting | Source |
+|---|---|
+| `0` | Ignore `X-Forwarded-For`; use the connection `remoteAddress?.ipAddress`. This is the secure default for direct deployments. |
+| `1` | Trust one proxy in front of the app and use the rightmost usable `X-Forwarded-For` entry. |
+| `n >= 2` | Trust `n` proxy hops and select the entry at `count - n`, falling back to `remoteAddress` when the header is absent or too short. |
 
-Both values land in task-locals on `ClientContext`:
+Match `trustedProxyHops` to your actual deployment. Setting it too high lets a
+client spoof an address by adding extra `X-Forwarded-For` entries; setting it
+too low reports a proxy address instead of the client.
+
+## Task-Local Context
+
+Captured values are exposed through `ClientContext`:
 
 ```swift
 public enum ClientContext {
@@ -80,36 +96,30 @@ public enum ClientContext {
 }
 ```
 
-## Why task-locals
+The middleware sets these inside nested `withValue` scopes around the downstream
+responder. Values are visible through async calls made during the request and
+are cleared when the request leaves the middleware chain.
 
-OpenAPI-generated handlers see only the typed `Operations.<X>.Input` and cannot
-reach Vapor's `Request`. Task-locals propagate through `await` boundaries so
-handlers that run inside the middleware's `withValue` block see the captured
-values. Conventional Vapor handlers can also read these task-locals or fall back
-to reading the request headers directly.
+## Companion Packages
 
-## Companion packages
+- [`BearerTokenAuthMiddleware`](https://github.com/mihaelamj/BearerTokenAuthMiddleware)
+  stamps bearer tokens on generated OpenAPI clients and enforces bearer tokens
+  in Vapor servers.
+- [`OpenAPILoggingMiddleware`](https://github.com/mihaelamj/OpenAPILoggingMiddleware)
+  logs OpenAPI requests and responses on both client and server paths, with
+  default credential-header redaction.
 
-- [`mihaelamj/BearerTokenAuthMiddleware`](https://github.com/mihaelamj/BearerTokenAuthMiddleware)
-  for client-side bearer-token stamping plus a server-side enforcement
-  middleware with `AuthMode` + validation strategies.
-- [`mihaelamj/OpenAPILoggingMiddleware`](https://github.com/mihaelamj/OpenAPILoggingMiddleware)
-  for request/response logging on both client and server sides.
-- [`mihaelamj/swift-server-middleware-petshop`](https://github.com/mihaelamj/swift-server-middleware-petshop)
-  end-to-end integration tests for all three middlewares composed inside
-  a real Vapor + OpenAPI 3.1 app, with macOS + Linux CI.
+## Platform Support
 
-## Platform support
-
-| Platform | How CI proves it |
+| Platform | CI coverage |
 |---|---|
-| macOS 13+ | full `swift build` + `swift test` (33 tests) |
-| Linux (Swift 6.0 container) | full `swift build` + `swift test` (33 tests) |
-| iOS / tvOS / watchOS | **not supported**: Vapor itself does not ship for these platforms |
+| macOS 13+ | `swift build` and `swift test` |
+| Linux, Swift 6.0 container | `swift build` and `swift test` |
+| iOS / tvOS / watchOS | Not supported because Vapor does not ship for these platforms |
 
 ## Documentation
 
-DocC is enabled. Generate the archive locally with:
+DocC is enabled:
 
 ```bash
 swift package --allow-writing-to-directory ./docs generate-documentation \
@@ -119,34 +129,25 @@ swift package --allow-writing-to-directory ./docs generate-documentation \
 
 ## Testing
 
-The package ships with **33 tests across 3 suites**:
+The package ships with **33 tests across 3 suites** covering:
 
-| Area | Tests |
-|---|---|
-| `ClientContext` (task-local semantics) | 8 |
-| `ClientIpMiddleware` (Vapor integration, trusted-proxy-hops) | 16 |
-| `ClientIpMiddleware: adversarial / malformed inputs` (XFF edge cases, 100-fold concurrent burst) | 9 |
+- `ClientContext` task-local semantics.
+- Vapor middleware integration.
+- `trustedProxyHops` behavior for direct, single-proxy, and multi-proxy setups.
+- Spoof resistance for malformed or adversarial `X-Forwarded-For` values.
+- Cross-request isolation and propagation across `await`.
 
-Coverage includes the secure-by-default `hops=0` path (XFF ignored), `hops=1`
-single-proxy resolution including client-spoof resistance, `hops=2`
-multi-proxy resolution, fallback to `remoteAddress` when XFF is absent or
-under-length, IPv6, whitespace trimming, missing-header fallback,
-cross-request isolation, propagation across `await`, and negative-hops
-clamping. Run with `swift test`.
+Run them with:
 
-CI runs the suite on macOS and on Linux (Swift 6.0 container).
+```bash
+swift test
+```
 
 ## Contributing
 
-Contributions are welcome. Before opening a PR, please read:
-
-- [CONTRIBUTING.md](CONTRIBUTING.md): setup, conventions, commit format, and the
-  PR checklist.
-- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): the behavior expected of everyone
-  taking part.
-- [SECURITY.md](SECURITY.md): how to report a vulnerability privately (do not
-  open a public issue for security problems).
-- [SUPPORT.md](SUPPORT.md): where to ask questions and file bugs.
+Contributions are welcome. Before opening a PR, read
+[CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md),
+[SECURITY.md](SECURITY.md), and [SUPPORT.md](SUPPORT.md).
 
 Notable changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
