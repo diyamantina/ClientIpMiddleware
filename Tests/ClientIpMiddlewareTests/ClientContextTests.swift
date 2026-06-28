@@ -1,13 +1,16 @@
+@testable import ClientIpMiddleware
 import Foundation
 import Testing
 
-@testable import ClientIpMiddleware
-
 @Suite("ClientContext")
 struct ClientContextTests {
+    private func readClientIp() async -> String? {
+        ClientContext.clientIp
+    }
 
-    private func readClientIp() async -> String? { ClientContext.clientIp }
-    private func readUserAgent() async -> String? { ClientContext.userAgent }
+    private func readUserAgent() async -> String? {
+        ClientContext.userAgent
+    }
 
     @Test("clientIp default is nil")
     func clientIpDefaultIsNil() {

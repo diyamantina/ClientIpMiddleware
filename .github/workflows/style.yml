@@ -1,0 +1,22 @@
+name: Style
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  style:
+    name: Format and lint
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: brew install swiftformat swiftlint
+      - name: SwiftFormat lint
+        run: swiftformat --lint . --config .swiftformat
+      - name: SwiftLint
+        run: swiftlint --config .swiftlint.yml --strict

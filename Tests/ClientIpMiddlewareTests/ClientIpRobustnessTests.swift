@@ -1,9 +1,8 @@
+@testable import ClientIpMiddleware
 import Foundation
 import Testing
 import Vapor
 import VaporTesting
-
-@testable import ClientIpMiddleware
 
 /// Adversarial coverage for `ClientIpMiddleware`. Each test feeds the
 /// middleware something a real attacker or a misconfigured proxy might emit
@@ -11,10 +10,11 @@ import VaporTesting
 /// secure).
 @Suite("ClientIpMiddleware: adversarial / malformed inputs")
 struct ClientIpRobustnessTests {
-
     actor Recorder {
         private(set) var ip: String?
-        func record(_ value: String?) { ip = value }
+        func record(_ value: String?) {
+            ip = value
+        }
     }
 
     private func makeApp(trustedProxyHops: Int) async throws -> (Application, Recorder) {
@@ -122,7 +122,7 @@ struct ClientIpRobustnessTests {
 
     @Test("hops=1: 50-entry XFF chain resolves to rightmost without iteration explosion")
     func longChain() async throws {
-        let entries = (1...50).map { "10.0.0.\($0)" }.joined(separator: ", ")
+        let entries = (1 ... 50).map { "10.0.0.\($0)" }.joined(separator: ", ")
         let (app, recorder) = try await makeApp(trustedProxyHops: 1)
         try await app.testing().test(
             .GET, "probe",
@@ -186,7 +186,9 @@ struct ClientIpRobustnessTests {
         // Capture per-request what BackendThe middleware put in the task-local.
         actor MultiRecorder {
             private(set) var observations: [Int: String] = [:]
-            func record(id: Int, ip: String?) { observations[id] = ip ?? "<nil>" }
+            func record(id: Int, ip: String?) {
+                observations[id] = ip ?? "<nil>"
+            }
         }
         let recorder = MultiRecorder()
 
@@ -197,7 +199,7 @@ struct ClientIpRobustnessTests {
         }
 
         try await withThrowingTaskGroup(of: Void.self) { group in
-            for i in 0..<100 {
+            for i in 0 ..< 100 {
                 group.addTask {
                     let expectedIP = "10.0.0.\(i)"
                     try await app.testing().test(
@@ -214,7 +216,7 @@ struct ClientIpRobustnessTests {
         }
 
         // Each request must see exactly its own IP.
-        for i in 0..<100 {
+        for i in 0 ..< 100 {
             let observed = await recorder.observations[i]
             #expect(observed == "10.0.0.\(i)", "request \(i) saw \(observed ?? "<nothing>")")
         }

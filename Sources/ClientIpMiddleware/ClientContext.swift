@@ -29,7 +29,6 @@ import Foundation
 /// - ``clientIp``
 /// - ``userAgent``
 public enum ClientContext {
-
     /// Best-effort client IP for the currently handled request.
     ///
     /// Sourced from `X-Forwarded-For` (first hop) when present, otherwise from the

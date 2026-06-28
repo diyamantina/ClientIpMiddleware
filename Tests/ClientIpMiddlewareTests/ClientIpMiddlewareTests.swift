@@ -1,13 +1,11 @@
+@testable import ClientIpMiddleware
 import Foundation
 import Testing
 import Vapor
 import VaporTesting
 
-@testable import ClientIpMiddleware
-
 @Suite("ClientIpMiddleware")
 struct ClientIpMiddlewareTests {
-
     /// Records what the task-locals were at handler-time, so tests can verify
     /// the middleware captured the right values.
     actor Recorder {
@@ -323,7 +321,7 @@ struct ClientIpMiddlewareTests {
 
         struct Recorded: AsyncResponder {
             let recorder: Recorder
-            func respond(to request: Request) async throws -> Response {
+            func respond(to _: Request) async throws -> Response {
                 await recorder.record(
                     ip: ClientContext.clientIp,
                     ua: ClientContext.userAgent
@@ -345,7 +343,7 @@ struct ClientIpMiddlewareTests {
     // MARK: - Negative trustedProxyHops is clamped to 0
 
     @Test("negative trustedProxyHops is clamped to 0")
-    func negativeHopsClamped() async throws {
+    func negativeHopsClamped() {
         let mw = ClientIpMiddleware(trustedProxyHops: -3)
         #expect(mw.trustedProxyHops == 0)
     }

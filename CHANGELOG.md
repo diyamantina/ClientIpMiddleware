@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `.swiftformat` and `.swiftlint.yml` at the repository root as the committed
+  source of truth for formatting and linting.
+- `scripts/check-namespacing.sh` (one top-level type per file) and a `pre-push`
+  git hook that runs the namespacing gate, `swiftformat --lint`,
+  `swiftlint --strict`, build, and test before a push reaches the remote.
+- A `Style` CI workflow that runs `swiftformat --lint` and `swiftlint --strict`
+  as required checks, backstopping the local hooks.
+
+### Changed
+- Reformatted the sources with the committed SwiftFormat configuration. No
+  behavior change; the compiled surface is identical.
+- Updated the local `commit-msg` and `pre-commit` hooks to the shared canon
+  implementation while keeping the CHANGELOG-entry gate.
+
 ## [1.0.1] - 2026-06-02
 
 Packaging and repository hardening. No library code changed; the compiled

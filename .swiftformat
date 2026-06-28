@@ -1,0 +1,21 @@
+# SwiftFormat configuration. The mechanical formatting gate.
+#
+# Source of truth for formatting: every clone and CI run formats from this file,
+# never from per-editor settings. Run `swiftformat . --config .swiftformat`
+# before committing; CI and the pre-push hook run `--lint` as the backstop.
+
+--swiftversion 6.0
+--exclude .build
+
+# House style.
+--indent 4
+--maxwidth 180
+--commas always
+
+# Safe defaults that match the style above.
+--trimwhitespace always
+--semicolons never
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--self remove

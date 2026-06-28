@@ -58,7 +58,6 @@ import Vapor
 /// ### Companion type
 /// - ``ClientContext``
 public struct ClientIpMiddleware: AsyncMiddleware {
-
     /// Number of trusted proxies in front of this server.
     public let trustedProxyHops: Int
 

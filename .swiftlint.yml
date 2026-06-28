@@ -1,0 +1,12 @@
+# Mechanical enforcement of the code rules a machine can decide
+# (engineering principle: no force-unwrap, force-try, or force-cast in shipping
+# code). CI and the pre-push hook run `swiftlint --config .swiftlint.yml --strict`.
+only_rules:
+  - force_unwrapping
+  - force_try
+  - force_cast
+force_unwrapping: error
+force_try: error
+force_cast: error
+excluded:
+  - .build
