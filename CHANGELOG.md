@@ -58,6 +58,6 @@ Initial public release.
   burst).
 - CI on macOS and on Linux (Swift 6.0 container).
 
-[Unreleased]: https://github.com/mihaelamj/ClientIpMiddleware/compare/1.0.1...HEAD
-[1.0.1]: https://github.com/mihaelamj/ClientIpMiddleware/compare/1.0.0...1.0.1
-[1.0.0]: https://github.com/mihaelamj/ClientIpMiddleware/releases/tag/1.0.0
+[Unreleased]: https://github.com/diyamantina/ClientIpMiddleware/compare/1.0.1...HEAD
+[1.0.1]: https://github.com/diyamantina/ClientIpMiddleware/compare/1.0.0...1.0.1
+[1.0.0]: https://github.com/diyamantina/ClientIpMiddleware/releases/tag/1.0.0

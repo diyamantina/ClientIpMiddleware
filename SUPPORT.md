@@ -3,9 +3,9 @@
 Need help with ClientIpMiddleware? Here is where to go.
 
 - **Questions and ideas**: open a
-  [Discussion](https://github.com/mihaelamj/ClientIpMiddleware/discussions).
+  [Discussion](https://github.com/diyamantina/ClientIpMiddleware/discussions).
 - **Bug reports**: open an
-  [issue](https://github.com/mihaelamj/ClientIpMiddleware/issues/new).
+  [issue](https://github.com/diyamantina/ClientIpMiddleware/issues/new).
 - **Feature requests**: open an issue describing the use case.
 - **Security issues**: do not open a public issue. See [SECURITY.md](SECURITY.md).
 

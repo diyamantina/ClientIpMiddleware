@@ -1,7 +1,7 @@
 # ClientIpMiddleware
 
-[![Linux](https://github.com/mihaelamj/ClientIpMiddleware/actions/workflows/linux.yml/badge.svg)](https://github.com/mihaelamj/ClientIpMiddleware/actions/workflows/linux.yml)
-[![macOS](https://github.com/mihaelamj/ClientIpMiddleware/actions/workflows/macos.yml/badge.svg)](https://github.com/mihaelamj/ClientIpMiddleware/actions/workflows/macos.yml)
+[![Linux](https://github.com/diyamantina/ClientIpMiddleware/actions/workflows/linux.yml/badge.svg)](https://github.com/diyamantina/ClientIpMiddleware/actions/workflows/linux.yml)
+[![macOS](https://github.com/diyamantina/ClientIpMiddleware/actions/workflows/macos.yml/badge.svg)](https://github.com/diyamantina/ClientIpMiddleware/actions/workflows/macos.yml)
 ![Swift 6.0+](https://img.shields.io/badge/Swift-6.0+-orange.svg)
 ![Platforms](https://img.shields.io/badge/Platforms-macOS%2013+%20%7C%20Linux-blue.svg)
 
@@ -23,7 +23,7 @@ Use it when you need:
 ## Installation
 
 ```swift
-.package(url: "https://github.com/mihaelamj/ClientIpMiddleware", from: "1.0.0"),
+.package(url: "https://github.com/diyamantina/ClientIpMiddleware", from: "1.0.0"),
 ```
 
 ```swift
@@ -102,10 +102,10 @@ are cleared when the request leaves the middleware chain.
 
 ## Companion Packages
 
-- [`BearerTokenAuthMiddleware`](https://github.com/mihaelamj/BearerTokenAuthMiddleware)
+- [`BearerTokenAuthMiddleware`](https://github.com/diyamantina/BearerTokenAuthMiddleware)
   stamps bearer tokens on generated OpenAPI clients and enforces bearer tokens
   in Vapor servers.
-- [`OpenAPILoggingMiddleware`](https://github.com/mihaelamj/OpenAPILoggingMiddleware)
+- [`OpenAPILoggingMiddleware`](https://github.com/diyamantina/OpenAPILoggingMiddleware)
   logs OpenAPI requests and responses on both client and server paths, with
   default credential-header redaction.
 
